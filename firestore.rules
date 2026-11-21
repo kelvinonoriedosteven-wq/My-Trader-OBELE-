@@ -1,0 +1,523 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        ('email_verified' in request.auth.token &&
+         'email' in request.auth.token &&
+         request.auth.token.email_verified == true &&
+         request.auth.token.email == 'patriciamiglioranza4@gmail.com') ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             data.accountTier in ['DEMO_ONLY', 'LIVE_UNVERIFIED', 'LIVE_PENDING_KYC', 'LIVE_VERIFIED'] &&
+             data.activeMode in ['LIVE', 'DEMO'] &&
+             data.kycStatus in ['NOT_SUBMITTED', 'PENDING', 'APPROVED', 'REJECTED'] &&
+             (!('kycRejectionReason' in data) || data.kycRejectionReason == null || (data.kycRejectionReason is string && data.kycRejectionReason.size() <= 500)) &&
+             (!('twoFactorPinHash' in data) || data.twoFactorPinHash == null || (data.twoFactorPinHash is string && data.twoFactorPinHash.size() <= 128)) &&
+             data.liveAvailableBalance is number && data.liveAvailableBalance >= 0 && data.liveAvailableBalance <= 100000000 &&
+             data.liveLockedBalance is number && data.liveLockedBalance >= 0 && data.liveLockedBalance <= 100000000 &&
+             data.demoAvailableBalance is number && data.demoAvailableBalance >= 0 && data.demoAvailableBalance <= 10000000 &&
+             data.accountFrozen is bool &&
+             data.twoFactorEnabled is bool &&
+             data.biometricEnabled is bool &&
+             data.dripEnabled is bool &&
+             data.whitelistedAddresses is list && data.whitelistedAddresses.size() <= 20 &&
+             (data.whitelistedAddresses.size() == 0 || data.whitelistedAddresses[0] is string) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidWatchlist(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 50 &&
+             data.symbols is list && data.symbols.size() <= 50 &&
+             (data.symbols.size() == 0 || data.symbols[0] is string) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPriceAlert(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.symbol is string && data.symbol.size() >= 1 && data.symbol.size() <= 24 &&
+             data.targetPrice is number && data.targetPrice > 0 &&
+             data.condition in ['ABOVE', 'BELOW'] &&
+             data.active is bool &&
+             data.triggered is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidKycSubmission(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+             data.dateOfBirth is string && data.dateOfBirth.size() >= 4 && data.dateOfBirth.size() <= 30 &&
+             data.nationality is string && data.nationality.size() >= 2 && data.nationality.size() <= 80 &&
+             data.taxResidency is string && data.taxResidency.size() >= 2 && data.taxResidency.size() <= 80 &&
+             data.taxIdLast4 is string && data.taxIdLast4.size() >= 2 && data.taxIdLast4.size() <= 20 &&
+             data.addressLine is string && data.addressLine.size() >= 5 && data.addressLine.size() <= 240 &&
+             data.riskTolerance in ['CONSERVATIVE', 'MODERATE', 'AGGRESSIVE'] &&
+             data.employmentStatus is string && data.employmentStatus.size() >= 2 && data.employmentStatus.size() <= 60 &&
+             data.annualIncomeRange is string && data.annualIncomeRange.size() >= 2 && data.annualIncomeRange.size() <= 60 &&
+             data.idType in ['PASSPORT', 'DRIVERS_LICENSE', 'NATIONAL_ID'] &&
+             (!('idFrontBase64' in data) || data.idFrontBase64 == null || (data.idFrontBase64 is string && data.idFrontBase64.size() <= 220000)) &&
+             (!('idBackBase64' in data) || data.idBackBase64 == null || (data.idBackBase64 is string && data.idBackBase64.size() <= 220000)) &&
+             (!('selfieBase64' in data) || data.selfieBase64 == null || (data.selfieBase64 is string && data.selfieBase64.size() <= 220000)) &&
+             (!('proofOfAddressName' in data) || data.proofOfAddressName == null || (data.proofOfAddressName is string && data.proofOfAddressName.size() <= 120)) &&
+             data.status in ['PENDING', 'APPROVED', 'REJECTED'] &&
+             (!('rejectionReason' in data) || data.rejectionReason == null || (data.rejectionReason is string && data.rejectionReason.size() <= 500)) &&
+             (!('reviewedBy' in data) || data.reviewedBy == null || (data.reviewedBy is string && data.reviewedBy.size() <= 128)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidDepositWallet(data) {
+      return data.symbol is string && data.symbol.size() >= 2 && data.symbol.size() <= 16 &&
+             data.network is string && data.network.size() >= 2 && data.network.size() <= 24 &&
+             data.address is string && data.address.size() >= 8 && data.address.size() <= 200 &&
+             data.minDeposit is number && data.minDeposit >= 0 &&
+             data.confirmationsRequired is int && data.confirmationsRequired >= 1 && data.confirmationsRequired <= 100 &&
+             data.active is bool &&
+             data.qrPayload is string && data.qrPayload.size() >= 8 && data.qrPayload.size() <= 240 &&
+             data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidDepositRequest(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userEmail is string && data.userEmail.size() <= 200 &&
+             data.assetSymbol is string && data.assetSymbol.size() >= 2 && data.assetSymbol.size() <= 16 &&
+             data.network is string && data.network.size() >= 2 && data.network.size() <= 24 &&
+             data.walletAddress is string && data.walletAddress.size() >= 8 && data.walletAddress.size() <= 200 &&
+             data.amountUsd is number && data.amountUsd > 0 && data.amountUsd <= 10000000 &&
+             data.cryptoAmount is number && data.cryptoAmount > 0 &&
+             data.txHash is string && data.txHash.size() >= 6 && data.txHash.size() <= 200 &&
+             (!('proofImageBase64' in data) || data.proofImageBase64 == null || (data.proofImageBase64 is string && data.proofImageBase64.size() <= 250000)) &&
+             data.status in ['PENDING', 'APPROVED', 'REJECTED'] &&
+             (!('adminNote' in data) || data.adminNote == null || (data.adminNote is string && data.adminNote.size() <= 500)) &&
+             (!('reviewedBy' in data) || data.reviewedBy == null || (data.reviewedBy is string && data.reviewedBy.size() <= 128)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidWithdrawalRequest(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userEmail is string && data.userEmail.size() <= 200 &&
+             data.assetSymbol is string && data.assetSymbol.size() >= 2 && data.assetSymbol.size() <= 16 &&
+             data.network is string && data.network.size() >= 2 && data.network.size() <= 24 &&
+             data.destinationAddress is string && data.destinationAddress.size() >= 8 && data.destinationAddress.size() <= 200 &&
+             data.amountUsd is number && data.amountUsd > 0 && data.amountUsd <= 10000000 &&
+             data.feeUsd is number && data.feeUsd >= 0 &&
+             data.netAmountUsd is number && data.netAmountUsd > 0 &&
+             data.status in ['PENDING', 'APPROVED', 'REJECTED'] &&
+             (!('payoutTxHash' in data) || data.payoutTxHash == null || (data.payoutTxHash is string && data.payoutTxHash.size() <= 200)) &&
+             (!('adminNote' in data) || data.adminNote == null || (data.adminNote is string && data.adminNote.size() <= 500)) &&
+             (!('reviewedBy' in data) || data.reviewedBy == null || (data.reviewedBy is string && data.reviewedBy.size() <= 128)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidOrder(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.symbol is string && data.symbol.size() >= 1 && data.symbol.size() <= 24 &&
+             data.assetName is string && data.assetName.size() >= 1 && data.assetName.size() <= 80 &&
+             data.assetClass is string && data.assetClass.size() >= 2 && data.assetClass.size() <= 30 &&
+             data.side in ['BUY', 'SELL'] &&
+             data.orderType in ['MARKET', 'LIMIT', 'STOP_LOSS', 'STOP_LIMIT', 'TRAILING_STOP', 'BRACKET'] &&
+             data.timeInForce in ['GTC', 'DAY'] &&
+             data.tradeMode in ['LIVE', 'DEMO'] &&
+             data.quantity is number && data.quantity > 0 &&
+             data.notionalUsd is number && data.notionalUsd > 0 &&
+             (!('limitPrice' in data) || data.limitPrice == null || (data.limitPrice is number && data.limitPrice >= 0)) &&
+             (!('stopPrice' in data) || data.stopPrice == null || (data.stopPrice is number && data.stopPrice >= 0)) &&
+             (!('takeProfitPrice' in data) || data.takeProfitPrice == null || (data.takeProfitPrice is number && data.takeProfitPrice >= 0)) &&
+             data.executedPrice is number && data.executedPrice >= 0 &&
+             data.feeUsd is number && data.feeUsd >= 0 &&
+             data.realizedPnl is number &&
+             data.status in ['OPEN', 'FILLED', 'CANCELED'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPosition(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.tradeMode in ['LIVE', 'DEMO'] &&
+             data.symbol is string && data.symbol.size() >= 1 && data.symbol.size() <= 24 &&
+             data.assetName is string && data.assetName.size() >= 1 && data.assetName.size() <= 80 &&
+             data.assetClass is string && data.assetClass.size() >= 2 && data.assetClass.size() <= 30 &&
+             data.quantity is number && data.quantity >= 0 &&
+             data.avgEntryPrice is number && data.avgEntryPrice >= 0 &&
+             data.costBasis is number && data.costBasis >= 0 &&
+             data.realizedPnl is number &&
+             data.dripEnabled is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidLedgerEntry(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userEmail is string && data.userEmail.size() <= 200 &&
+             data.entryType in ['DEPOSIT_CREDIT', 'WITHDRAWAL_LOCK', 'WITHDRAWAL_PAYOUT', 'WITHDRAWAL_REFUND', 'ADMIN_CREDIT', 'ADMIN_DEBIT', 'TRADE_BUY', 'TRADE_SELL', 'DEMO_RESET'] &&
+             data.tradeMode in ['LIVE', 'DEMO'] &&
+             data.amountDelta is number &&
+             data.balanceAfter is number && data.balanceAfter >= 0 &&
+             data.referenceId is string && data.referenceId.size() <= 128 &&
+             data.note is string && data.note.size() <= 400 &&
+             data.actorUid is string && data.actorUid.size() >= 1 && data.actorUid.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidSupportTicket(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userEmail is string && data.userEmail.size() <= 200 &&
+             data.subject is string && data.subject.size() >= 3 && data.subject.size() <= 140 &&
+             data.category is string && data.category.size() >= 2 && data.category.size() <= 40 &&
+             data.message is string && data.message.size() >= 5 && data.message.size() <= 2000 &&
+             data.status in ['OPEN', 'IN_PROGRESS', 'RESOLVED'] &&
+             (!('adminReply' in data) || data.adminReply == null || (data.adminReply is string && data.adminReply.size() <= 2000)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidMarketControl(data) {
+      return data.symbol is string && data.symbol.size() >= 1 && data.symbol.size() <= 24 &&
+             data.tradingEnabled is bool &&
+             data.spreadBps is number && data.spreadBps >= 0 && data.spreadBps <= 500 &&
+             data.feeBps is number && data.feeBps >= 0 && data.feeBps <= 500 &&
+             data.maxLeverage is number && data.maxLeverage >= 1 && data.maxLeverage <= 100 &&
+             data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAuditLog(data) {
+      return data.actorUid is string && data.actorUid.size() >= 1 && data.actorUid.size() <= 128 &&
+             data.actorEmail is string && data.actorEmail.size() <= 200 &&
+             data.action is string && data.action.size() >= 2 && data.action.size() <= 80 &&
+             data.targetType is string && data.targetType.size() >= 2 && data.targetType.size() <= 60 &&
+             data.targetId is string && data.targetId.size() >= 1 && data.targetId.size() <= 128 &&
+             data.details is string && data.details.size() <= 1000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidAdminRole(data) {
+      return data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.role in ['SUPER_ADMIN', 'COMPLIANCE_OFFICER', 'TREASURY_OPS'] &&
+             data.addedBy is string && data.addedBy.size() >= 1 && data.addedBy.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId) && isOwner(userId) &&
+                       incoming().userId == userId &&
+                       incoming().keys().hasAll([
+                         'userId', 'email', 'displayName', 'accountTier', 'activeMode', 'kycStatus',
+                         'liveAvailableBalance', 'liveLockedBalance', 'demoAvailableBalance',
+                         'accountFrozen', 'twoFactorEnabled', 'biometricEnabled', 'dripEnabled',
+                         'whitelistedAddresses', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'email', 'displayName', 'accountTier', 'activeMode', 'kycStatus',
+                         'kycRejectionReason', 'twoFactorPinHash',
+                         'liveAvailableBalance', 'liveLockedBalance', 'demoAvailableBalance',
+                         'accountFrozen', 'twoFactorEnabled', 'biometricEnabled', 'dripEnabled',
+                         'whitelistedAddresses', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().liveAvailableBalance == 0 &&
+                       incoming().liveLockedBalance == 0 &&
+                       incoming().demoAvailableBalance == 10000 &&
+                       incoming().accountFrozen == false &&
+                       incoming().kycStatus == 'NOT_SUBMITTED' &&
+                       incoming().accountTier in ['DEMO_ONLY', 'LIVE_UNVERIFIED'] &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isValidId(userId) && isSignedIn() &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt && (
+                         isAdmin() ||
+                         (isOwner(userId) && !existing().accountFrozen && (
+                           (
+                             incoming().diff(existing()).affectedKeys().hasOnly([
+                               'displayName', 'activeMode', 'demoAvailableBalance',
+                               'twoFactorEnabled', 'twoFactorPinHash', 'biometricEnabled',
+                               'dripEnabled', 'whitelistedAddresses', 'accountTier',
+                               'kycStatus', 'kycRejectionReason', 'updatedAt'
+                             ]) &&
+                             (incoming().accountTier == existing().accountTier || incoming().accountTier in ['LIVE_UNVERIFIED', 'LIVE_PENDING_KYC']) &&
+                             (incoming().kycStatus == existing().kycStatus || incoming().kycStatus == 'PENDING')
+                           ) ||
+                           (
+                             incoming().diff(existing()).affectedKeys().hasOnly(['liveAvailableBalance', 'liveLockedBalance', 'updatedAt']) &&
+                             incoming().liveLockedBalance > existing().liveLockedBalance &&
+                             incoming().liveAvailableBalance < existing().liveAvailableBalance &&
+                             math.abs((incoming().liveAvailableBalance + incoming().liveLockedBalance) - (existing().liveAvailableBalance + existing().liveLockedBalance)) <= 0.01
+                           ) ||
+                           (
+                             existing().kycStatus == 'APPROVED' &&
+                             incoming().diff(existing()).affectedKeys().hasOnly(['liveAvailableBalance', 'updatedAt'])
+                           )
+                         ))
+                       );
+      allow delete: if false;
+
+      match /watchlists/{watchlistId} {
+        allow get: if isValidId(userId) && isValidId(watchlistId) && (isOwner(userId) || isAdmin());
+        allow list: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow create: if isValidId(userId) && isValidId(watchlistId) && isOwner(userId) &&
+                         incoming().userId == userId &&
+                         incoming().keys().hasAll(['userId', 'name', 'symbols', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'name', 'symbols', 'createdAt', 'updatedAt']) &&
+                         isValidWatchlist(incoming());
+        allow update: if isValidId(userId) && isValidId(watchlistId) && isOwner(userId) &&
+                         isValidWatchlist(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'symbols', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(watchlistId) && (isOwner(userId) || isAdmin());
+      }
+
+      match /price_alerts/{alertId} {
+        allow get: if isValidId(userId) && isValidId(alertId) && (isOwner(userId) || isAdmin());
+        allow list: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow create: if isValidId(userId) && isValidId(alertId) && isOwner(userId) &&
+                         incoming().userId == userId &&
+                         incoming().keys().hasAll(['userId', 'symbol', 'targetPrice', 'condition', 'active', 'triggered', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'symbol', 'targetPrice', 'condition', 'active', 'triggered', 'createdAt', 'updatedAt']) &&
+                         isValidPriceAlert(incoming());
+        allow update: if isValidId(userId) && isValidId(alertId) && isOwner(userId) &&
+                         isValidPriceAlert(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['targetPrice', 'condition', 'active', 'triggered', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(alertId) && (isOwner(userId) || isAdmin());
+      }
+    }
+
+    match /kyc_submissions/{kycId} {
+      allow get: if isValidId(kycId) && (isOwner(kycId) || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(kycId) && isOwner(kycId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'PENDING' &&
+                       incoming().keys().hasAll([
+                         'userId', 'fullName', 'dateOfBirth', 'nationality', 'taxResidency', 'taxIdLast4',
+                         'addressLine', 'riskTolerance', 'employmentStatus', 'annualIncomeRange', 'idType',
+                         'status', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'fullName', 'dateOfBirth', 'nationality', 'taxResidency', 'taxIdLast4',
+                         'addressLine', 'riskTolerance', 'employmentStatus', 'annualIncomeRange', 'idType',
+                         'idFrontBase64', 'idBackBase64', 'selfieBase64', 'proofOfAddressName',
+                         'status', 'rejectionReason', 'reviewedBy', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidKycSubmission(incoming());
+      allow update: if isValidId(kycId) && isSignedIn() &&
+                       isValidKycSubmission(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt && (
+                         (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'rejectionReason', 'reviewedBy', 'updatedAt'])) ||
+                         (isOwner(kycId) && existing().status != 'APPROVED' && incoming().status == 'PENDING' &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'fullName', 'dateOfBirth', 'nationality', 'taxResidency', 'taxIdLast4',
+                            'addressLine', 'riskTolerance', 'employmentStatus', 'annualIncomeRange', 'idType',
+                            'idFrontBase64', 'idBackBase64', 'selfieBase64', 'proofOfAddressName',
+                            'status', 'rejectionReason', 'updatedAt'
+                          ]))
+                       );
+      allow delete: if false;
+    }
+
+    match /deposit_wallets/{walletId} {
+      allow get: if isValidId(walletId) && isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isValidId(walletId) && isAdmin() &&
+                       incoming().keys().hasAll(['symbol', 'network', 'address', 'minDeposit', 'confirmationsRequired', 'active', 'qrPayload', 'updatedBy', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['symbol', 'network', 'address', 'minDeposit', 'confirmationsRequired', 'active', 'qrPayload', 'updatedBy', 'createdAt', 'updatedAt']) &&
+                       isValidDepositWallet(incoming());
+      allow update: if isValidId(walletId) && isAdmin() &&
+                       isValidDepositWallet(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['symbol', 'network', 'address', 'minDeposit', 'confirmationsRequired', 'active', 'qrPayload', 'updatedBy', 'updatedAt']);
+      allow delete: if isValidId(walletId) && isAdmin();
+    }
+
+    match /deposit_requests/{depositId} {
+      allow get: if isValidId(depositId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(depositId) && isOwner(incoming().userId) &&
+                       incoming().status == 'PENDING' &&
+                       incoming().keys().hasAll(['userId', 'userEmail', 'assetSymbol', 'network', 'walletAddress', 'amountUsd', 'cryptoAmount', 'txHash', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'userEmail', 'assetSymbol', 'network', 'walletAddress', 'amountUsd', 'cryptoAmount', 'txHash', 'proofImageBase64', 'status', 'adminNote', 'reviewedBy', 'createdAt', 'updatedAt']) &&
+                       isValidDepositRequest(incoming());
+      allow update: if isValidId(depositId) && isAdmin() &&
+                       existing().status == 'PENDING' &&
+                       incoming().status in ['APPROVED', 'REJECTED'] &&
+                       isValidDepositRequest(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'adminNote', 'reviewedBy', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /withdrawal_requests/{withdrawalId} {
+      allow get: if isValidId(withdrawalId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(withdrawalId) && isOwner(incoming().userId) &&
+                       incoming().status == 'PENDING' &&
+                       incoming().keys().hasAll(['userId', 'userEmail', 'assetSymbol', 'network', 'destinationAddress', 'amountUsd', 'feeUsd', 'netAmountUsd', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'userEmail', 'assetSymbol', 'network', 'destinationAddress', 'amountUsd', 'feeUsd', 'netAmountUsd', 'status', 'payoutTxHash', 'adminNote', 'reviewedBy', 'createdAt', 'updatedAt']) &&
+                       isValidWithdrawalRequest(incoming());
+      allow update: if isValidId(withdrawalId) && isAdmin() &&
+                       existing().status == 'PENDING' &&
+                       incoming().status in ['APPROVED', 'REJECTED'] &&
+                       isValidWithdrawalRequest(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'payoutTxHash', 'adminNote', 'reviewedBy', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(orderId) && isOwner(incoming().userId) &&
+                       incoming().keys().hasAll(['userId', 'symbol', 'assetName', 'assetClass', 'side', 'orderType', 'timeInForce', 'tradeMode', 'quantity', 'notionalUsd', 'executedPrice', 'feeUsd', 'realizedPnl', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'symbol', 'assetName', 'assetClass', 'side', 'orderType', 'timeInForce', 'tradeMode', 'quantity', 'notionalUsd', 'limitPrice', 'stopPrice', 'takeProfitPrice', 'executedPrice', 'feeUsd', 'realizedPnl', 'status', 'createdAt', 'updatedAt']) &&
+                       isValidOrder(incoming());
+      allow update: if isValidId(orderId) && isSignedIn() &&
+                       isValidOrder(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().tradeMode == existing().tradeMode &&
+                       incoming().createdAt == existing().createdAt && (
+                         isAdmin() ||
+                         (isOwner(existing().userId) &&
+                          existing().status == 'OPEN' &&
+                          incoming().status in ['OPEN', 'FILLED', 'CANCELED'] &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'limitPrice', 'executedPrice', 'notionalUsd', 'feeUsd', 'realizedPnl', 'updatedAt']))
+                       );
+      allow delete: if false;
+    }
+
+    match /positions/{positionId} {
+      allow get: if isValidId(positionId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(positionId) && isOwner(incoming().userId) &&
+                       incoming().keys().hasAll(['userId', 'tradeMode', 'symbol', 'assetName', 'assetClass', 'quantity', 'avgEntryPrice', 'costBasis', 'realizedPnl', 'dripEnabled', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'tradeMode', 'symbol', 'assetName', 'assetClass', 'quantity', 'avgEntryPrice', 'costBasis', 'realizedPnl', 'dripEnabled', 'createdAt', 'updatedAt']) &&
+                       isValidPosition(incoming());
+      allow update: if isValidId(positionId) && isSignedIn() &&
+                       isValidPosition(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().tradeMode == existing().tradeMode &&
+                       incoming().symbol == existing().symbol &&
+                       incoming().createdAt == existing().createdAt &&
+                       (isOwner(existing().userId) || isAdmin()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['quantity', 'avgEntryPrice', 'costBasis', 'realizedPnl', 'dripEnabled', 'updatedAt']);
+      allow delete: if isValidId(positionId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /ledger_entries/{entryId} {
+      allow get: if isValidId(entryId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(entryId) && isSignedIn() &&
+                       (isOwner(incoming().userId) || isAdmin()) &&
+                       incoming().actorUid == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'userEmail', 'entryType', 'tradeMode', 'amountDelta', 'balanceAfter', 'referenceId', 'note', 'actorUid', 'createdAt']) &&
+                       incoming().keys().hasOnly(['userId', 'userEmail', 'entryType', 'tradeMode', 'amountDelta', 'balanceAfter', 'referenceId', 'note', 'actorUid', 'createdAt']) &&
+                       isValidLedgerEntry(incoming());
+      allow update, delete: if false;
+    }
+
+    match /support_tickets/{ticketId} {
+      allow get: if isValidId(ticketId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(ticketId) && isOwner(incoming().userId) &&
+                       incoming().status == 'OPEN' &&
+                       incoming().keys().hasAll(['userId', 'userEmail', 'subject', 'category', 'message', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'userEmail', 'subject', 'category', 'message', 'status', 'adminReply', 'createdAt', 'updatedAt']) &&
+                       isValidSupportTicket(incoming());
+      allow update: if isValidId(ticketId) && isAdmin() &&
+                       isValidSupportTicket(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'adminReply', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /market_controls/{symbol} {
+      allow get: if isValidId(symbol) && isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isValidId(symbol) && isAdmin() &&
+                       incoming().keys().hasAll(['symbol', 'tradingEnabled', 'spreadBps', 'feeBps', 'maxLeverage', 'updatedBy', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['symbol', 'tradingEnabled', 'spreadBps', 'feeBps', 'maxLeverage', 'updatedBy', 'createdAt', 'updatedAt']) &&
+                       isValidMarketControl(incoming());
+      allow update: if isValidId(symbol) && isAdmin() &&
+                       isValidMarketControl(incoming()) &&
+                       incoming().symbol == existing().symbol &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['tradingEnabled', 'spreadBps', 'feeBps', 'maxLeverage', 'updatedBy', 'updatedAt']);
+      allow delete: if isValidId(symbol) && isAdmin();
+    }
+
+    match /audit_logs/{logId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(logId) && isAdmin() &&
+                       incoming().actorUid == request.auth.uid &&
+                       incoming().keys().hasAll(['actorUid', 'actorEmail', 'action', 'targetType', 'targetId', 'details', 'createdAt']) &&
+                       incoming().keys().hasOnly(['actorUid', 'actorEmail', 'action', 'targetType', 'targetId', 'details', 'createdAt']) &&
+                       isValidAuditLog(incoming());
+      allow update, delete: if false;
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isValidId(adminUid) && (isOwner(adminUid) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(adminUid) && isAdmin() &&
+                       incoming().uid == adminUid &&
+                       incoming().keys().hasAll(['uid', 'email', 'role', 'addedBy', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['uid', 'email', 'role', 'addedBy', 'createdAt', 'updatedAt']) &&
+                       isValidAdminRole(incoming());
+      allow update: if isValidId(adminUid) && isAdmin() &&
+                       isValidAdminRole(incoming()) &&
+                       incoming().uid == existing().uid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['email', 'role', 'addedBy', 'updatedAt']);
+      allow delete: if isValidId(adminUid) && isAdmin();
+    }
+  }
+}

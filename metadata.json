@@ -1,0 +1,6 @@
+{
+  "name": "ApexBroker",
+  "description": "Multi-asset brokerage trading, live quotes, portfolio tracking, KYC verification, and admin control platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,343 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Single-ID dual-ledger brokerage user profile storing Live and Demo balances, KYC state, and security preferences.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the account owner." },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "accountTier": { "type": "string", "enum": ["DEMO_ONLY", "LIVE_UNVERIFIED", "LIVE_PENDING_KYC", "LIVE_VERIFIED"] },
+        "activeMode": { "type": "string", "enum": ["LIVE", "DEMO"] },
+        "kycStatus": { "type": "string", "enum": ["NOT_SUBMITTED", "PENDING", "APPROVED", "REJECTED"] },
+        "kycRejectionReason": { "type": "string" },
+        "liveAvailableBalance": { "type": "number" },
+        "liveLockedBalance": { "type": "number" },
+        "demoAvailableBalance": { "type": "number" },
+        "accountFrozen": { "type": "boolean" },
+        "twoFactorEnabled": { "type": "boolean" },
+        "twoFactorPinHash": { "type": "string" },
+        "biometricEnabled": { "type": "boolean" },
+        "dripEnabled": { "type": "boolean" },
+        "whitelistedAddresses": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": [
+        "userId", "email", "displayName", "accountTier", "activeMode", "kycStatus",
+        "liveAvailableBalance", "liveLockedBalance", "demoAvailableBalance",
+        "accountFrozen", "twoFactorEnabled", "biometricEnabled", "dripEnabled",
+        "whitelistedAddresses", "createdAt", "updatedAt"
+      ]
+    },
+    "Watchlist": {
+      "title": "Watchlist",
+      "description": "User custom asset watchlist.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "symbols": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "symbols", "createdAt", "updatedAt"]
+    },
+    "PriceAlert": {
+      "title": "PriceAlert",
+      "description": "User price threshold alert rule.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "symbol": { "type": "string" },
+        "targetPrice": { "type": "number" },
+        "condition": { "type": "string", "enum": ["ABOVE", "BELOW"] },
+        "active": { "type": "boolean" },
+        "triggered": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "symbol", "targetPrice", "condition", "active", "triggered", "createdAt", "updatedAt"]
+    },
+    "KycSubmission": {
+      "title": "KycSubmission",
+      "description": "User identity, tax residency, risk suitability, and ID/selfie proof dossier.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "fullName": { "type": "string" },
+        "dateOfBirth": { "type": "string" },
+        "nationality": { "type": "string" },
+        "taxResidency": { "type": "string" },
+        "taxIdLast4": { "type": "string" },
+        "addressLine": { "type": "string" },
+        "riskTolerance": { "type": "string", "enum": ["CONSERVATIVE", "MODERATE", "AGGRESSIVE"] },
+        "employmentStatus": { "type": "string" },
+        "annualIncomeRange": { "type": "string" },
+        "idType": { "type": "string", "enum": ["PASSPORT", "DRIVERS_LICENSE", "NATIONAL_ID"] },
+        "idFrontBase64": { "type": "string" },
+        "idBackBase64": { "type": "string" },
+        "selfieBase64": { "type": "string" },
+        "proofOfAddressName": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "rejectionReason": { "type": "string" },
+        "reviewedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "fullName", "dateOfBirth", "nationality", "taxResidency", "taxIdLast4",
+        "addressLine", "riskTolerance", "employmentStatus", "annualIncomeRange", "idType",
+        "status", "createdAt", "updatedAt"
+      ]
+    },
+    "DepositWallet": {
+      "title": "DepositWallet",
+      "description": "Admin-configured crypto deposit network, wallet address, and minimum limit.",
+      "type": "object",
+      "properties": {
+        "symbol": { "type": "string" },
+        "network": { "type": "string" },
+        "address": { "type": "string" },
+        "minDeposit": { "type": "number" },
+        "confirmationsRequired": { "type": "integer" },
+        "active": { "type": "boolean" },
+        "qrPayload": { "type": "string" },
+        "updatedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["symbol", "network", "address", "minDeposit", "confirmationsRequired", "active", "qrPayload", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "DepositRequest": {
+      "title": "DepositRequest",
+      "description": "User-submitted manual crypto deposit proof awaiting admin approval.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "assetSymbol": { "type": "string" },
+        "network": { "type": "string" },
+        "walletAddress": { "type": "string" },
+        "amountUsd": { "type": "number" },
+        "cryptoAmount": { "type": "number" },
+        "txHash": { "type": "string" },
+        "proofImageBase64": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "adminNote": { "type": "string" },
+        "reviewedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userEmail", "assetSymbol", "network", "walletAddress", "amountUsd", "cryptoAmount", "txHash", "status", "createdAt", "updatedAt"]
+    },
+    "WithdrawalRequest": {
+      "title": "WithdrawalRequest",
+      "description": "User-submitted crypto payout request with locked available funds.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "assetSymbol": { "type": "string" },
+        "network": { "type": "string" },
+        "destinationAddress": { "type": "string" },
+        "amountUsd": { "type": "number" },
+        "feeUsd": { "type": "number" },
+        "netAmountUsd": { "type": "number" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "payoutTxHash": { "type": "string" },
+        "adminNote": { "type": "string" },
+        "reviewedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userEmail", "assetSymbol", "network", "destinationAddress", "amountUsd", "feeUsd", "netAmountUsd", "status", "createdAt", "updatedAt"]
+    },
+    "TradeOrder": {
+      "title": "TradeOrder",
+      "description": "Brokerage order separated by LIVE or DEMO tradeMode.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "symbol": { "type": "string" },
+        "assetName": { "type": "string" },
+        "assetClass": { "type": "string" },
+        "side": { "type": "string", "enum": ["BUY", "SELL"] },
+        "orderType": { "type": "string", "enum": ["MARKET", "LIMIT", "STOP_LOSS", "STOP_LIMIT", "TRAILING_STOP", "BRACKET"] },
+        "timeInForce": { "type": "string", "enum": ["GTC", "DAY"] },
+        "tradeMode": { "type": "string", "enum": ["LIVE", "DEMO"] },
+        "quantity": { "type": "number" },
+        "notionalUsd": { "type": "number" },
+        "limitPrice": { "type": "number" },
+        "stopPrice": { "type": "number" },
+        "takeProfitPrice": { "type": "number" },
+        "executedPrice": { "type": "number" },
+        "feeUsd": { "type": "number" },
+        "realizedPnl": { "type": "number" },
+        "status": { "type": "string", "enum": ["OPEN", "FILLED", "CANCELED"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "symbol", "assetName", "assetClass", "side", "orderType", "timeInForce", "tradeMode", "quantity", "notionalUsd", "executedPrice", "feeUsd", "realizedPnl", "status", "createdAt", "updatedAt"]
+    },
+    "PortfolioPosition": {
+      "title": "PortfolioPosition",
+      "description": "Active holding separated by LIVE or DEMO tradeMode.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "tradeMode": { "type": "string", "enum": ["LIVE", "DEMO"] },
+        "symbol": { "type": "string" },
+        "assetName": { "type": "string" },
+        "assetClass": { "type": "string" },
+        "quantity": { "type": "number" },
+        "avgEntryPrice": { "type": "number" },
+        "costBasis": { "type": "number" },
+        "realizedPnl": { "type": "number" },
+        "dripEnabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "tradeMode", "symbol", "assetName", "assetClass", "quantity", "avgEntryPrice", "costBasis", "realizedPnl", "dripEnabled", "createdAt", "updatedAt"]
+    },
+    "LedgerEntry": {
+      "title": "LedgerEntry",
+      "description": "Immutable financial ledger record for deposits, withdrawals, admin adjustments, and trades.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "entryType": { "type": "string", "enum": ["DEPOSIT_CREDIT", "WITHDRAWAL_LOCK", "WITHDRAWAL_PAYOUT", "WITHDRAWAL_REFUND", "ADMIN_CREDIT", "ADMIN_DEBIT", "TRADE_BUY", "TRADE_SELL", "DEMO_RESET"] },
+        "tradeMode": { "type": "string", "enum": ["LIVE", "DEMO"] },
+        "amountDelta": { "type": "number" },
+        "balanceAfter": { "type": "number" },
+        "referenceId": { "type": "string" },
+        "note": { "type": "string" },
+        "actorUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userEmail", "entryType", "tradeMode", "amountDelta", "balanceAfter", "referenceId", "note", "actorUid", "createdAt"]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "User compliance or trading support request.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "subject": { "type": "string" },
+        "category": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPEN", "IN_PROGRESS", "RESOLVED"] },
+        "adminReply": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userEmail", "subject", "category", "message", "status", "createdAt", "updatedAt"]
+    },
+    "MarketControl": {
+      "title": "MarketControl",
+      "description": "Admin-managed spread, fee, leverage, and trading halt settings per ticker.",
+      "type": "object",
+      "properties": {
+        "symbol": { "type": "string" },
+        "tradingEnabled": { "type": "boolean" },
+        "spreadBps": { "type": "number" },
+        "feeBps": { "type": "number" },
+        "maxLeverage": { "type": "number" },
+        "updatedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["symbol", "tradingEnabled", "spreadBps", "feeBps", "maxLeverage", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable admin action audit log.",
+      "type": "object",
+      "properties": {
+        "actorUid": { "type": "string" },
+        "actorEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "targetType": { "type": "string" },
+        "targetId": { "type": "string" },
+        "details": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["actorUid", "actorEmail", "action", "targetType", "targetId", "details", "createdAt"]
+    },
+    "AdminRole": {
+      "title": "AdminRole",
+      "description": "Platform admin role assignment.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["SUPER_ADMIN", "COMPLIANCE_OFFICER", "TREASURY_OPS"] },
+        "addedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "addedBy", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User brokerage profile and dual Live/Demo ledgers."
+    },
+    "/users/{userId}/watchlists/{watchlistId}": {
+      "schema": { "$ref": "#/entities/Watchlist" },
+      "description": "User-scoped watchlists."
+    },
+    "/users/{userId}/price_alerts/{alertId}": {
+      "schema": { "$ref": "#/entities/PriceAlert" },
+      "description": "User-scoped price threshold alerts."
+    },
+    "/kyc_submissions/{kycId}": {
+      "schema": { "$ref": "#/entities/KycSubmission" },
+      "description": "User KYC dossier keyed by user UID."
+    },
+    "/deposit_wallets/{walletId}": {
+      "schema": { "$ref": "#/entities/DepositWallet" },
+      "description": "Admin-configured crypto deposit addresses."
+    },
+    "/deposit_requests/{depositId}": {
+      "schema": { "$ref": "#/entities/DepositRequest" },
+      "description": "Manual crypto deposit proofs submitted by users."
+    },
+    "/withdrawal_requests/{withdrawalId}": {
+      "schema": { "$ref": "#/entities/WithdrawalRequest" },
+      "description": "Crypto payout requests submitted by users."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/TradeOrder" },
+      "description": "Trade orders tagged by LIVE or DEMO tradeMode."
+    },
+    "/positions/{positionId}": {
+      "schema": { "$ref": "#/entities/PortfolioPosition" },
+      "description": "Active holdings tagged by LIVE or DEMO tradeMode."
+    },
+    "/ledger_entries/{entryId}": {
+      "schema": { "$ref": "#/entities/LedgerEntry" },
+      "description": "Immutable financial ledger entries."
+    },
+    "/support_tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/SupportTicket" },
+      "description": "User support tickets."
+    },
+    "/market_controls/{symbol}": {
+      "schema": { "$ref": "#/entities/MarketControl" },
+      "description": "Admin trading controls per asset symbol."
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Immutable admin audit log."
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminRole" },
+      "description": "Admin role registry."
+    }
+  }
+}
